@@ -9,6 +9,8 @@ const state = {
     timeRemaining: 60,
     timerInterval: null,
     editingDeckIndex: null,
+    tiltLocked: false,
+    tiltHandler: null,
     settings: {
         timerDuration: 60,
         audioEnabled: true,
@@ -438,6 +440,10 @@ function countdown() {
 function startRound() {
     showCurrentCard();
     startTimer();
+
+    // Reset tilt state
+    state.tiltLocked = false;
+
     setupTiltControls();
     setupDesktopControls();
 }
@@ -479,29 +485,42 @@ function startTimer() {
 }
 
 function setupTiltControls() {
+    // Remove any existing listener
+    if (state.tiltHandler) {
+        window.removeEventListener('deviceorientation', state.tiltHandler);
+    }
+
     const sensitivity = {
-        low: 25,
-        medium: 35,
-        high: 45
+        low: 30,
+        medium: 40,
+        high: 50
     };
 
-    const threshold = sensitivity[state.settings.tiltSensitivity] || 35;
+    const threshold = sensitivity[state.settings.tiltSensitivity] || 40;
     let baselineBeta = null;
-    let calibrated = false;
+    let calibrationCount = 0;
+    const CALIBRATION_SAMPLES = 10; // Average first 10 readings
+    let betaSum = 0;
 
-    window.addEventListener('deviceorientation', handleTilt);
+    state.tiltHandler = function handleTilt(event) {
+        // If tilt is locked (cooldown period), ignore all events
+        if (state.tiltLocked) {
+            return;
+        }
 
-    function handleTilt(event) {
         const beta = event.beta; // Front-to-back tilt (-180 to 180)
         const gamma = event.gamma; // Left-to-right tilt (-90 to 90)
 
         // Skip if we don't have valid readings
         if (beta === null || gamma === null) return;
 
-        // Calibrate baseline position (when phone is on forehead)
-        if (!calibrated) {
-            baselineBeta = beta;
-            calibrated = true;
+        // Calibrate baseline position over multiple samples for stability
+        if (calibrationCount < CALIBRATION_SAMPLES) {
+            betaSum += beta;
+            calibrationCount++;
+            if (calibrationCount === CALIBRATION_SAMPLES) {
+                baselineBeta = betaSum / CALIBRATION_SAMPLES;
+            }
             return;
         }
 
@@ -509,16 +528,19 @@ function setupTiltControls() {
         const deltaFromBaseline = beta - baselineBeta;
 
         // Tilted down (screen facing down) = correct
-        if (deltaFromBaseline > threshold) {
-            window.removeEventListener('deviceorientation', handleTilt);
+        // Need significant tilt AND not already locked
+        if (deltaFromBaseline > threshold && !state.tiltLocked) {
+            state.tiltLocked = true;
             markCorrect();
         }
         // Tilted up (screen facing up) = skip
-        else if (deltaFromBaseline < -threshold) {
-            window.removeEventListener('deviceorientation', handleTilt);
+        else if (deltaFromBaseline < -threshold && !state.tiltLocked) {
+            state.tiltLocked = true;
             markSkip();
         }
-    }
+    };
+
+    window.addEventListener('deviceorientation', state.tiltHandler);
 }
 
 function setupDesktopControls() {
@@ -566,17 +588,30 @@ function nextCard() {
     state.currentCardIndex++;
 
     if (state.timeRemaining > 0) {
+        // Wait before showing next card and re-enabling tilt
         setTimeout(() => {
             showCurrentCard();
-            setupTiltControls();
             setupDesktopControls();
+
+            // Unlock tilt detection after card is displayed
+            // This gives time for user to return to neutral position
+            setTimeout(() => {
+                state.tiltLocked = false;
+                setupTiltControls();
+            }, 500); // 500ms cooldown before accepting next tilt
         }, 300);
     }
 }
 
 function endRound() {
     clearInterval(state.timerInterval);
-    window.removeEventListener('deviceorientation', () => {});
+
+    // Remove tilt handler
+    if (state.tiltHandler) {
+        window.removeEventListener('deviceorientation', state.tiltHandler);
+        state.tiltHandler = null;
+    }
+    state.tiltLocked = false;
 
     // Unlock orientation
     if (screen.orientation && screen.orientation.unlock) {
