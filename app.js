@@ -226,7 +226,7 @@ function setupEventListeners() {
 }
 
 // Deck Management
-function loadDeckSelection() {
+async function loadDeckSelection() {
     const deckList = document.getElementById('deck-list');
     deckList.innerHTML = '';
 
@@ -237,7 +237,7 @@ function loadDeckSelection() {
     });
 
     // Add custom decks
-    const customDecks = getCustomDecks();
+    const customDecks = await getCustomDecks();
     customDecks.forEach(deck => {
         const deckItem = createDeckItem(deck);
         deckList.appendChild(deckItem);
@@ -260,12 +260,23 @@ function selectDeck(deck) {
     showScreen('ready-screen');
 }
 
-function getCustomDecks() {
+async function getCustomDecks() {
+    // Try to merge with cloud
+    if (window.CloudSync) {
+        try {
+            const mergedDecks = await window.CloudSync.mergeDecks();
+            return mergedDecks;
+        } catch (error) {
+            console.error('Cloud sync failed, using local:', error);
+        }
+    }
+
+    // Fallback to local only
     const decks = localStorage.getItem('customDecks');
     return decks ? JSON.parse(decks) : [];
 }
 
-function saveCustomDeck() {
+async function saveCustomDeck() {
     const name = document.getElementById('deck-name').value.trim();
     const cardsInput = document.getElementById('deck-cards').value.trim();
 
@@ -287,7 +298,7 @@ function saveCustomDeck() {
         return;
     }
 
-    const customDecks = getCustomDecks();
+    const customDecks = await getCustomDecks();
 
     // Check if we're editing an existing deck
     if (state.editingDeckIndex !== null) {
@@ -311,12 +322,17 @@ function saveCustomDeck() {
 
     localStorage.setItem('customDecks', JSON.stringify(customDecks));
 
+    // Sync to cloud
+    if (window.CloudSync) {
+        await window.CloudSync.syncToCloud(customDecks);
+    }
+
     showScreen('home-screen');
 }
 
-function loadManageDecks() {
+async function loadManageDecks() {
     const customDeckList = document.getElementById('custom-deck-list');
-    const customDecks = getCustomDecks();
+    const customDecks = await getCustomDecks();
 
     if (customDecks.length === 0) {
         customDeckList.innerHTML = '<p style="text-align: center; color: var(--text-dim);">No custom decks yet</p>';
@@ -341,8 +357,8 @@ function loadManageDecks() {
     });
 }
 
-function editCustomDeck(index) {
-    const customDecks = getCustomDecks();
+async function editCustomDeck(index) {
+    const customDecks = await getCustomDecks();
     const deck = customDecks[index];
 
     // Populate the create deck form with existing deck data
@@ -355,11 +371,18 @@ function editCustomDeck(index) {
     showScreen('create-deck-screen');
 }
 
-function deleteCustomDeck(index) {
+async function deleteCustomDeck(index) {
     if (confirm('Are you sure you want to delete this deck?')) {
-        const customDecks = getCustomDecks();
+        const customDecks = await getCustomDecks();
+        const deletedDeck = customDecks[index];
         customDecks.splice(index, 1);
         localStorage.setItem('customDecks', JSON.stringify(customDecks));
+
+        // Delete from cloud
+        if (window.CloudSync && deletedDeck) {
+            await window.CloudSync.deleteFromCloud(deletedDeck.id);
+        }
+
         loadManageDecks();
     }
 }
