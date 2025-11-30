@@ -1,22 +1,23 @@
-# Heads Up! Web App
+# flipquik+
 
-A mobile-first Progressive Web App (PWA) that replicates the "Heads Up" party game experience.
+A mobile-first Progressive Web App (PWA) - the fast-paced party game where you guess words by tilting your phone.
 
 ## Features
 
 - 25 pre-loaded deck categories with 20 cards each
-- Custom deck creation and management
+- Custom deck creation and management with cloud backup
 - Tilt controls for mobile devices
 - Desktop fallback controls
 - Configurable timer (30/45/60/90/120 seconds)
 - Audio countdown and sound effects
 - Round summary with detailed results
+- Cloud sync with Supabase
 - Offline support via service worker
 - Installable as a PWA on mobile devices
 
 ## Play Now
 
-Visit: https://[your-username].github.io/headsup
+Visit: https://jacobaross.github.io/flipquik-plus
 
 ## How to Play
 
@@ -41,4 +42,5 @@ Then open http://localhost:8000
 - DeviceOrientation API
 - Web Audio API
 - Service Worker API
+- Supabase (Cloud Database)
 - Local Storage API

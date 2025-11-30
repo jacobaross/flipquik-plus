@@ -7,11 +7,11 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // User ID management
 function getUserId() {
-    let userId = localStorage.getItem('headsup_user_id');
+    let userId = localStorage.getItem('flipquik_user_id');
     if (!userId) {
         // Generate a unique ID for this user
         userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('headsup_user_id', userId);
+        localStorage.setItem('flipquik_user_id', userId);
     }
     return userId;
 }

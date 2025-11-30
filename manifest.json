@@ -1,7 +1,7 @@
 {
-  "name": "Heads Up!",
-  "short_name": "Heads Up",
-  "description": "The party game where you guess words while holding your phone to your forehead",
+  "name": "flipquik+",
+  "short_name": "flipquik+",
+  "description": "The fast-paced party game - guess words by tilting your phone",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

@@ -1,9 +1,10 @@
-const CACHE_NAME = 'headsup-v1';
+const CACHE_NAME = 'flipquik-v1';
 const urlsToCache = [
   '/',
   '/index.html',
   '/styles.css',
   '/app.js',
+  '/supabase.js',
   '/manifest.json'
 ];
 
